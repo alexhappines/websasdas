@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Masuk / Daftar · ExcelAcademy</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <a class="brand" href="index.html" style="justify-content:center;margin-bottom:6px"><span class="brand-ico">X</span> ExcelAcademy</a>
+    <h2 class="center" id="formTitle">Selamat datang kembali</h2>
+    <p class="center muted" style="font-size:.9rem" id="formSub">Masuk untuk melanjutkan belajar</p>
+
+    <div class="tabs">
+      <button type="button" id="tabLogin">Masuk</button>
+      <button type="button" id="tabReg">Daftar</button>
+    </div>
+
+    <!-- MASUK -->
+    <form id="loginForm" novalidate>
+      <div class="form-err" id="loginErr"></div>
+      <div class="field"><label for="lEmail">Email</label><input id="lEmail" type="email" placeholder="kamu@email.com" required></div>
+      <div class="field"><label for="lPass">Kata sandi</label><input id="lPass" type="password" placeholder="••••••••" required></div>
+      <button class="btn btn-primary btn-block" type="submit">Masuk</button>
+    </form>
+
+    <!-- DAFTAR -->
+    <form id="regForm" style="display:none" novalidate>
+      <div class="form-err" id="regErr"></div>
+      <div class="field"><label for="rName">Nama lengkap</label><input id="rName" type="text" placeholder="Budi Santoso" required></div>
+      <div class="field"><label for="rEmail">Email</label><input id="rEmail" type="email" placeholder="kamu@email.com" required></div>
+      <div class="field"><label for="rPass">Kata sandi</label><input id="rPass" type="password" placeholder="Minimal 6 karakter" required></div>
+      <div class="field"><label for="rPass2">Ulangi kata sandi</label><input id="rPass2" type="password" placeholder="••••••••" required></div>
+      <button class="btn btn-primary btn-block" type="submit">Daftar Gratis</button>
+    </form>
+
+    <p class="auth-note">Demo: akun &amp; progres tersimpan lokal di browser kamu.<br>Tidak ada data yang dikirim ke server.</p>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const qs = new URLSearchParams(location.search);
+  const nextRaw = qs.get('next');
+  const safeNext = () => (nextRaw && /^[a-z]+\.html(\?[a-z0-9=&%._-]*)?$/i.test(nextRaw)) ? nextRaw : 'dashboard.html';
+
+  const tLogin = document.getElementById('tabLogin'), tReg = document.getElementById('tabReg');
+  const fLogin = document.getElementById('loginForm'), fReg = document.getElementById('regForm');
+  const errL = document.getElementById('loginErr'), errR = document.getElementById('regErr');
+  const title = document.getElementById('formTitle'), sub = document.getElementById('formSub');
+
+  function showErr(el, msg){ el.textContent = msg; el.classList.add('show'); }
+  function hideErr(el){ el.classList.remove('show'); }
+
+  function tab(which){
+    const isLogin = which === 'login';
+    tLogin.classList.toggle('active', isLogin);
+    tReg.classList.toggle('active', !isLogin);
+    fLogin.style.display = isLogin ? '' : 'none';
+    fReg.style.display = isLogin ? 'none' : '';
+    title.textContent = isLogin ? 'Selamat datang kembali' : 'Buat akun gratis';
+    sub.textContent = isLogin ? 'Masuk untuk melanjutkan belajar' : 'Mulai belajar Excel hari ini, gratis';
+    hideErr(errL); hideErr(errR);
+  }
+  tLogin.onclick = () => tab('login');
+  tReg.onclick = () => tab('reg');
+  tab(qs.get('tab') === 'daftar' ? 'reg' : 'login');
+
+  fLogin.onsubmit = e => {
+    e.preventDefault(); hideErr(errL);
+    const r = login(document.getElementById('lEmail').value, document.getElementById('lPass').value);
+    if (r.ok) { toast('Berhasil masuk. Selamat belajar!'); location.href = safeNext(); }
+    else showErr(errL, r.error);
+  };
+
+  fReg.onsubmit = e => {
+    e.preventDefault(); hideErr(errR);
+    const p1 = document.getElementById('rPass').value, p2 = document.getElementById('rPass2').value;
+    if (p1 !== p2) return showErr(errR, 'Konfirmasi kata sandi tidak sama.');
+    const r = register(document.getElementById('rName').value, document.getElementById('rEmail').value, p1);
+    if (r.ok) { toast('Akun berhasil dibuat!'); location.href = safeNext(); }
+    else showErr(errR, r.error);
+  };
+})();
+</script>
+</body>
+</html>

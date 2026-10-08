@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tes Otomatis · ExcelAcademy</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="container" style="max-width:720px;padding-top:40px;padding-bottom:64px">
+  <h1>Tes Otomatis ExcelAcademy</h1>
+  <p class="muted">Memeriksa logika auth, langganan, progres, dan integritas data kursus. Halaman ini membersihkan data demo-nya sendiri.</p>
+  <div id="res" style="margin-top:20px"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const res = document.getElementById('res');
+  let pass = 0, fail = 0;
+
+  function T(name, fn){
+    try { fn(); pass++; res.insertAdjacentHTML('beforeend', `<div class="t pass">✓ ${name}</div>`); }
+    catch (e) { fail++; res.insertAdjacentHTML('beforeend', `<div class="t fail">✗ ${name}: ${e.message}</div>`); }
+  }
+  function eq(a, b, msg){
+    if (a !== b) throw new Error((msg || 'nilai tidak sama') + ` (dapat: ${JSON.stringify(a)}, harap: ${JSON.stringify(b)})`);
+  }
+
+  const EMAIL = 'tester@excelacademy.test';
+
+  // backup sesi & data user sungguhan, pulihkan setelah tes selesai
+  const sessionBackup = localStorage.getItem('xl_session');
+  const usersBackup = getUsers().filter(x => x.email !== EMAIL);
+
+  // bersihkan jejak test sebelumnya
+  saveUsers(usersBackup);
+  localStorage.removeItem('xl_session');
+
+  T('register menolak nama pendek', () => eq(register('A', EMAIL, 'rahasia1').ok, false));
+  T('register menolak email invalid', () => eq(register('Budi Test', 'budi#test', 'rahasia1').ok, false));
+  T('register menolak password pendek', () => eq(register('Budi Test', EMAIL, '123').ok, false));
+  T('register sukses + auto login', () => {
+    const r = register('Budi Test', EMAIL, 'rahasia1');
+    eq(r.ok, true); eq(currentUser().name, 'Budi Test');
+  });
+  T('email duplikat ditolak', () => eq(register('Budi Lain', EMAIL, 'rahasia1').ok, false));
+  T('login password salah ditolak', () => eq(login(EMAIL, 'salahpass').ok, false));
+  T('login sukses', () => eq(login(EMAIL, 'rahasia1').ok, true));
+
+  T('user baru berpaket Gratis', () => { eq(isPro(), false); eq(planName(), 'Gratis'); });
+  T('subscribe bulanan → isPro true + ada tanggal berakhir', () => {
+    subscribe('monthly');
+    eq(isPro(), true);
+    eq(currentUser().planEx > Date.now(), true);
+  });
+  T('paket kedaluwarsa otomatis dianggap Gratis', () => {
+    const u = currentUser(); u.planEx = Date.now() - 1000; setUser(u);
+    eq(isPro(), false); eq(planName(), 'Gratis');
+  });
+  T('paket tidak valid ditolak', () => eq(subscribe('haha').ok, false));
+  T('cancelSub kembali ke Gratis', () => { subscribe('yearly'); cancelSub(); eq(isPro(), false); });
+
+  T('courseProgress dihitung benar', () => {
+    const c = COURSES[0];
+    eq(courseProgress(c).pct, 0);
+    completeLesson(c.lessons[0].id);
+    const p = courseProgress(c);
+    eq(p.done, 1);
+    eq(p.pct, Math.round(1 / c.lessons.length * 100));
+  });
+  T('totalDone menghitung lintas kursus', () => {
+    completeLesson(COURSES[1].lessons[0].id);
+    eq(totalDone(), 2);
+  });
+  T('nextLesson memberi pelajaran belum selesai', () => {
+    eq(nextLesson(COURSES[0]).id, 'c1l2');
+  });
+
+  T('integritas data: semua kuis punya jawaban valid', () => {
+    COURSES.forEach(c => c.lessons.forEach(l => {
+      if (l.type === 'kuis') {
+        if (!l.quiz || !Array.isArray(l.quiz.options) || l.quiz.options.length < 2)
+          throw new Error(l.id + ' tanpa kuis valid');
+        if (!Number.isInteger(l.quiz.answer) || l.quiz.answer < 0 || l.quiz.answer >= l.quiz.options.length)
+          throw new Error(l.id + ' indeks jawaban di luar rentang');
+      }
+    }));
+  });
+  T('integritas data: ID pelajaran unik', () => {
+    const ids = COURSES.flatMap(c => c.lessons.map(l => l.id));
+    eq(new Set(ids).size, ids.length);
+  });
+  T('fmtIDR memformat rupiah', () => {
+    eq(fmtIDR(0), 'Gratis');
+    eq(fmtIDR(49000).startsWith('Rp'), true);
+  });
+
+  // pulihkan sesi & data user sungguhan
+  saveUsers(usersBackup);
+  if (sessionBackup) {
+    try { if (JSON.parse(sessionBackup).email !== EMAIL) localStorage.setItem('xl_session', sessionBackup); }
+    catch { /* sesi rusak: biarkan kosong */ }
+  }
+
+  res.insertAdjacentHTML('beforeend',
+    `<p style="margin-top:16px"><b>${fail === 0 ? '✅ SEMUA BERHASIL' : '❌ ADA KEGAGALAN'}</b>: ${pass} lulus, ${fail} gagal. (Data test sudah dibersihkan.)</p>`);
+})();
+</script>
+</body>
+</html>

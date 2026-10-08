@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pelajaran · ExcelAcademy</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <main class="main">
+    <div id="content"></div>
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  if (!requireAuth()) return;
+  renderSide('courses');
+
+  const qs = new URLSearchParams(location.search);
+  const course = findCourse(qs.get('course'));
+  const lesson = findLesson(course, qs.get('lesson'));
+  if (!course || !lesson) { location.href = 'courses.html'; return; }
+
+  const u = currentUser();
+  const locked = !!lesson.pro && !isPro(u);
+  const doneAlready = lessonDone(u, lesson.id);
+  const idx = course.lessons.indexOf(lesson);
+  const prev = course.lessons[idx - 1], next = course.lessons[idx + 1];
+
+  /* ----- sidebar daftar pelajaran ----- */
+  function renderList(user){
+    document.getElementById('llist').innerHTML = course.lessons.map((l, i) => `
+      <a class="ll ${l.id === lesson.id ? 'active' : ''}" href="${lessonUrl(course.id, l.id)}">
+        <span>${lessonDone(user, l.id) ? '✓ ' : (i + 1) + '. '}${esc(l.title)}</span>
+        ${l.pro && !isPro(user) ? '<span class="lock">🔒</span>' : lessonDone(user, l.id) ? '<span class="done">✓</span>' : ''}
+      </a>`).join('');
+  }
+
+  /* ----- konten utama ----- */
+  let bodyHtml;
+  if (lesson.type === 'video') {
+    bodyHtml = `
+      <div class="player">
+        <button class="play-btn" onclick="toast('Video pembelajaran akan tayang di sini (demo).')">▶</button>
+        <b>${esc(lesson.title)}</b>
+        <span style="opacity:.85;font-size:.9rem">${lesson.dur} · 1080p · Subtitle ID</span>
+      </div>`;
+  } else if (lesson.type === 'kuis') {
+    bodyHtml = `
+      <div class="prose">
+        <h3>${esc(lesson.title)}</h3>
+        <p><b>${esc(lesson.quiz.q)}</b></p>
+        <div class="quiz" id="quiz">
+          ${lesson.quiz.options.map((o, i) => `<button type="button" data-i="${i}">${'ABCD'[i]}. ${esc(o)}</button>`).join('')}
+        </div>
+        <p class="muted" id="quizMsg" style="min-height:1.4em;margin:0">Pilih satu jawaban untuk melanjutkan.</p>
+      </div>`;
+  } else {
+    bodyHtml = `<div class="prose">${lesson.content}</div>`;
+  }
+
+  document.getElementById('content').innerHTML = `
+    <div class="crumb"><a href="courses.html">Kursus</a> › ${esc(course.title)}</div>
+    <div class="lesson-wrap">
+      <div class="lesson-list">
+        <div class="ll-head"><span class="celltag">${String.fromCharCode(65 + COURSES.indexOf(course))}1</span> ${esc(course.title)}</div>
+        <div id="llist"></div>
+      </div>
+      <div>
+        <div class="page-title" style="margin-bottom:14px">
+          <div>
+            <h1 style="font-size:1.3rem">${esc(lesson.title)}</h1>
+            <span class="muted" style="font-size:.88rem">${typeLabel[lesson.type]} · ${lesson.dur}${lesson.pro ? ' · <span class="badge badge-amber">Pro</span>' : ''}</span>
+          </div>
+        </div>
+        <div class="${locked ? 'locked' : ''}">
+          ${bodyHtml}
+          ${locked ? `<div class="lock-over">
+            <div style="font-size:2.4rem">🔒</div>
+            <b>Konten khusus member Pro</b>
+            <p class="muted" style="max-width:340px">Buka pelajaran ini dan ${COURSES.reduce((a, c) => a + c.lessons.filter(l => l.pro).length, 0)} pelajaran Pro lainnya mulai Rp49.000/bulan.</p>
+            <a class="btn btn-primary" href="billing.html">Buka dengan Pro</a>
+          </div>` : ''}
+        </div>
+        <div class="lesson-nav">
+          ${prev ? `<a class="btn btn-ghost" href="${lessonUrl(course.id, prev.id)}">Sebelumnya</a>` : '<span></span>'}
+          <button class="btn btn-primary" id="doneBtn" ${locked || (lesson.type === 'kuis' && !doneAlready) || doneAlready ? 'disabled' : ''}>
+            ${doneAlready ? '✓ Selesai' : 'Tandai Selesai'}
+          </button>
+          ${next ? `<a class="btn btn-ghost" href="${lessonUrl(course.id, next.id)}">Berikutnya</a>`
+                 : `<a class="btn btn-ghost" href="dashboard.html">Kembali ke Dashboard</a>`}
+        </div>
+      </div>
+    </div>`;
+  renderList(u);
+
+  /* ----- interaksi kuis ----- */
+  if (lesson.type === 'kuis' && !locked) {
+    const quizEl = document.getElementById('quiz');
+    const msg = document.getElementById('quizMsg');
+    if (doneAlready) {
+      quizEl.dataset.solved = '1';
+      msg.textContent = 'Kuis ini sudah selesai sebelumnya.';
+    }
+    quizEl.querySelectorAll('button').forEach(btn => btn.onclick = () => {
+      if (quizEl.dataset.solved) return;
+      const i = +btn.dataset.i;
+      if (i === lesson.quiz.answer) {
+        btn.classList.add('right');
+        quizEl.dataset.solved = '1';
+        msg.textContent = 'Benar. Pelajaran ditandai selesai.';
+        msg.style.color = 'var(--green)';
+        markDone(true);
+      } else {
+        btn.classList.add('wrong');
+        msg.textContent = 'Belum tepat. Coba jawaban lain.';
+        msg.style.color = 'var(--red)';
+      }
+    });
+  }
+
+  /* ----- tombol selesai ----- */
+  const doneBtn = document.getElementById('doneBtn');
+  doneBtn.onclick = () => markDone(false);
+
+  function markDone(auto){
+    if (locked) return;
+    completeLesson(lesson.id);
+    doneBtn.disabled = true;
+    doneBtn.textContent = '✓ Selesai';
+    renderList(currentUser()); // ambil user segar: progres baru ada di localStorage
+    toast(auto ? 'Jawaban benar. Pelajaran selesai.' : 'Pelajaran ditandai selesai.');
+  }
+
+})();
+</script>
+</body>
+</html>

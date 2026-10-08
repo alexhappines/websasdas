@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tagihan &amp; Paket · ExcelAcademy</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <main class="main">
+    <div class="page-title"><h1>Tagihan &amp; Paket</h1></div>
+
+    <div class="card" id="current" style="margin-bottom:28px"></div>
+
+    <h2>Ganti Paket</h2>
+    <div class="plans" id="plans"></div>
+  </main>
+</div>
+
+<!-- modal pembayaran -->
+<div class="modal" id="payModal">
+  <div class="modal-card">
+    <h3>Bayar <span id="payPlanName"></span></h3>
+    <p class="muted" id="payPlanPrice" style="margin-top:-6px"></p>
+    <div class="form-err" id="payErr"></div>
+    <form id="payForm" novalidate>
+      <div class="field"><label for="ccName">Nama di kartu</label><input id="ccName" placeholder="BUDI SANTOSO" required></div>
+      <div class="field"><label for="ccNum">Nomor kartu</label><input id="ccNum" inputmode="numeric" placeholder="4242 4242 4242 4242" maxlength="19" required></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="field"><label for="ccExp">Berlaku (MM/YY)</label><input id="ccExp" placeholder="12/28" maxlength="5" required></div>
+        <div class="field"><label for="ccCvv">CVV</label><input id="ccCvv" inputmode="numeric" placeholder="123" maxlength="4" required></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button type="button" class="btn btn-ghost" id="payCancel">Batal</button>
+        <button type="submit" class="btn btn-primary btn-block">Bayar Sekarang</button>
+      </div>
+    </form>
+    <p class="auth-note">Demo: tidak ada pemrosesan pembayaran sungguhan.</p>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  if (!requireAuth()) return;
+  renderSide('billing');
+
+  let pendingPlan = null;
+
+  function render(){
+    const u = currentUser();
+    renderSide('billing'); // planbox dirender ulang agar status selalu terbaru
+
+    document.getElementById('current').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+        <div>
+          <b style="font-size:1.1rem">Paket saat ini: ${esc(planName(u))}</b>
+          <div class="muted" style="font-size:.9rem">
+            ${isPro(u) ? 'Aktif · berlaku hingga ' + fmtDate(u.planEx) : 'Akses kursus dasar. Upgrade untuk membuka semua ' + COURSES.reduce((a, c) => a + c.lessons.filter(l => l.pro).length, 0) + ' pelajaran Pro.'}
+          </div>
+        </div>
+        ${isPro(u) ? '<button class="btn btn-danger btn-sm" id="cancelBtn">Batalkan Langganan</button>' : ''}
+      </div>`;
+
+    document.getElementById('plans').innerHTML = Object.values(Plans).map(p => {
+      const active = (p.id === 'free') ? !isPro(u) : (isPro(u) && u.plan === p.id);
+      const proCount = COURSES.reduce((a, c) => a + c.lessons.filter(l => l.pro).length, 0);
+      return `
+      <div class="planrow">
+        <div class="planrow-info">
+          <h3>${p.name}</h3>
+          <p>${p.id === 'free'
+            ? 'Kursus Dasar penuh ditambah pelajaran pembuka di tiap kursus lain.'
+            : 'Semua 20 pelajaran terbuka, termasuk ' + proCount + ' pelajaran Pro.'}</p>
+        </div>
+        <div class="planrow-price"><b>${fmtIDR(p.price)}</b><span>${p.per}</span></div>
+        ${p.id === 'free'
+          ? `<button class="btn btn-ghost" disabled>${active ? 'Paket Saat Ini' : 'Default'}</button>`
+          : `<button class="btn ${active ? 'btn-ghost' : 'btn-primary'}" data-buy="${p.id}" ${active ? 'disabled' : ''}>${active ? 'Aktif' : 'Bayar ' + fmtIDR(p.price)}</button>`}
+      </div>`;
+    }).join('');
+
+    document.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => openPay(b.dataset.buy));
+    const cb = document.getElementById('cancelBtn');
+    if (cb) cb.onclick = () => {
+      if (confirm('Yakin batalkan langganan Pro?')) { cancelSub(); toast('Langganan dibatalkan. Kembali ke paket Gratis.'); render(); }
+    };
+  }
+
+  const modal = document.getElementById('payModal');
+  function openPay(planId){
+    pendingPlan = planId;
+    document.getElementById('payPlanName').textContent = Plans[planId].name;
+    document.getElementById('payPlanPrice').textContent = fmtIDR(Plans[planId].price) + ' ' + Plans[planId].per;
+    document.getElementById('payErr').classList.remove('show');
+    document.getElementById('payForm').reset();
+    modal.classList.add('show');
+  }
+  document.getElementById('payCancel').onclick = () => modal.classList.remove('show');
+  modal.onclick = e => { if (e.target === modal) modal.classList.remove('show'); };
+
+  document.getElementById('ccNum').addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ');
+  });
+
+  document.getElementById('payForm').onsubmit = e => {
+    e.preventDefault();
+    const err = document.getElementById('payErr');
+    const num = document.getElementById('ccNum').value.replace(/\s/g, '');
+    const exp = document.getElementById('ccExp').value;
+    const cvv = document.getElementById('ccCvv').value;
+    const name = document.getElementById('ccName').value.trim();
+    if (name.length < 2) return fail('Nama di kartu tidak valid.');
+    if (!/^\d{16}$/.test(num)) return fail('Nomor kartu harus 16 digit.');
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(exp)) return fail('Format tanggal: MM/YY.');
+    if (!/^\d{3,4}$/.test(cvv)) return fail('CVV harus 3–4 digit.');
+    subscribe(pendingPlan);
+    modal.classList.remove('show');
+    toast('Pembayaran diterima. Semua pelajaran Pro sekarang terbuka.');
+    render();
+
+    function fail(msg){ err.textContent = msg; err.classList.add('show'); }
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>

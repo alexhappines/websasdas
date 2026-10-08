@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ExcelAcademy · Belajar Excel dari Nol</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="nav" id="nav"></header>
+
+<section class="hero">
+  <div class="container hero-grid">
+    <div>
+      <h1>Belajar Excel dari nol, sampai bisa bikin laporan sendiri</h1>
+      <p class="lead">20 pelajaran singkat yang langsung praktik di contoh tabel. Mulai dari <code class="hero-code">=SUM()</code>, berakhir di dashboard penjualan.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px">
+        <a class="btn btn-light" href="login.html?tab=daftar">Buat Akun Gratis</a>
+        <a class="btn btn-ghost" style="color:#fff;border-color:rgba(255,255,255,.4)" href="courses.html">Buka Daftar Kursus</a>
+      </div>
+      <div class="stats">
+        <div><b>4</b><span>kursus bertingkat</span></div>
+        <div><b>10</b><span>pelajaran gratis</span></div>
+        <div><b>4</b><span>kuis di tiap kursus</span></div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="fx-bar"><span class="fx">fx</span><span class="formula">=SUM(C2:C4)</span></div>
+      <table class="mock">
+        <tr><th>Produk</th><th>Qty</th><th>Harga</th></tr>
+        <tr><td>Pensil</td><td>120</td><td>Rp2.500</td></tr>
+        <tr><td>Buku</td><td>80</td><td>Rp6.000</td></tr>
+        <tr><td>Penghapus</td><td>150</td><td>Rp1.500</td></tr>
+        <tr><td><b>Total</b></td><td colspan="2" class="hl">Rp870.000</td></tr>
+      </table>
+      <div class="sheet-tabs"><span class="on">Penjualan</span><span>Stok</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container split">
+    <div>
+      <h2>Kursusnya seperti apa?</h2>
+      <p>Tiap pelajaran 5 sampai 20 menit: baca contoh tabelnya, coba rumusnya, lalu jawab kuisnya. Progres tersimpan di akunmu, jadi bisa lanjut kapan saja tanpa mengulang dari awal.</p>
+      <p>Kursus dasar terbuka gratis selamanya. Kalau butuh PivotTable, dashboard, dan forecasting untuk kerjaan, baru ambil Pro.</p>
+    </div>
+    <ul class="checklist">
+      <li>Kuis pilihan ganda di akhir tiap kursus</li>
+      <li>Contoh tabel dan rumus yang bisa dicoba langsung</li>
+      <li>Progres pelajaran tersimpan otomatis</li>
+      <li>Konten Pro: PivotTable, dashboard KPI, forecasting</li>
+      <li>Langganan bulanan atau tahunan, bisa dibatalkan sendiri</li>
+    </ul>
+  </div>
+</section>
+
+<section style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="container">
+    <div class="section-head">
+      <h2>Empat jalur belajar</h2>
+      <p>Dari cell pertama sampai dashboard. Pelajaran bertanda gembok hanya untuk member Pro.</p>
+    </div>
+    <div class="grid grid-2" id="courseGrid"></div>
+  </div>
+</section>
+
+<section id="harga">
+  <div class="container">
+    <div class="section-head">
+      <h2>Berapa biayanya?</h2>
+      <p>Gratis untuk memulai, Pro kalau memang butuh. Tanpa kontrak, batalkan sendiri dari halaman tagihan.</p>
+    </div>
+    <div class="plans">
+      <div class="planrow">
+        <div class="planrow-info"><h3>Gratis</h3><p>10 pelajaran gratis: kursus Dasar penuh ditambah pelajaran pembuka di tiap kursus lain.</p></div>
+        <div class="planrow-price"><b>Rp0</b><span>selamanya</span></div>
+        <a class="btn btn-ghost" href="login.html?tab=daftar" data-plan>Buat Akun Gratis</a>
+      </div>
+      <div class="planrow">
+        <div class="planrow-info"><h3>Pro Bulanan</h3><p>Semua 20 pelajaran terbuka, termasuk PivotTable, dashboard, dan kuis lanjutan.</p></div>
+        <div class="planrow-price"><b>Rp49.000</b><span>per bulan</span></div>
+        <a class="btn btn-primary" href="login.html?tab=daftar" data-plan>Ambil Bulanan</a>
+      </div>
+      <div class="planrow">
+        <div class="planrow-info"><h3>Pro Tahunan</h3><p>Isi sama dengan Bulanan, dibayar setahun di depan. Setara Rp33.250 per bulan.</p></div>
+        <div class="planrow-price"><b>Rp399.000</b><span>per tahun</span></div>
+        <a class="btn btn-ghost" href="login.html?tab=daftar" data-plan>Ambil Tahunan</a>
+      </div>
+    </div>
+    <p class="muted center" style="margin-top:14px;font-size:.9rem">Pembayaran di situs ini masih demo: tidak ada kartu yang ditagih.</p>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container footer-row">
+    <div class="brand"><span class="brand-ico">X</span> ExcelAcademy</div>
+    <nav class="footer-nav"><a href="courses.html">Kursus</a><a href="index.html#harga">Harga</a><a href="login.html">Masuk</a><a href="tests.html">Tes Otomatis</a></nav>
+  </div>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  const u = currentUser();
+  document.getElementById('courseGrid').innerHTML = COURSES.slice(0, 4).map((c, i) => `
+    <a class="card course-card" href="courses.html">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <span class="celltag">${String.fromCharCode(65 + i)}1</span>
+        <span class="badge ${c.tag === 'Pro' ? 'badge-amber' : 'badge-green'}">${c.tag}</span>
+      </div>
+      <h3>${esc(c.title)}</h3>
+      <p>${esc(c.desc)}</p>
+      <div class="course-meta"><span>${c.lessons.length} pelajaran</span><span>${c.hours} jam</span><span>${c.level}</span></div>
+    </a>`).join('');
+  // sudah login → tombol harga menuju billing
+  if (u) document.querySelectorAll('[data-plan]').forEach(a => a.href = 'billing.html');
+</script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · ExcelAcademy</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <main class="main">
+    <div class="page-title">
+      <div>
+        <h1 id="greet">Halo</h1>
+        <span class="muted" id="sub"></span>
+      </div>
+      <a class="btn btn-primary" href="courses.html">Buka Katalog Kursus</a>
+    </div>
+
+    <div class="grid grid-4" id="stats"></div>
+
+    <h2 style="margin-top:36px">Lanjutkan Belajar</h2>
+    <div id="continue"></div>
+
+    <h2 style="margin-top:36px">Kursus Saya</h2>
+    <div class="grid grid-2" id="myCourses"></div>
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+if (requireAuth()) {
+  renderSide('dashboard');
+  const u = currentUser();
+
+  document.getElementById('greet').textContent = 'Halo, ' + u.name.split(' ')[0];
+  document.getElementById('sub').textContent = 'Member sejak ' + fmtDate(u.joined) + ' · Paket ' + planName(u);
+
+  const started = COURSES.map(c => ({ c, p: courseProgress(c, u) }));
+  document.getElementById('stats').innerHTML = `
+    <div class="card stat"><b>${started.filter(s => s.p.done > 0).length}</b><span>Kursus dimulai</span></div>
+    <div class="card stat"><b>${totalDone(u)}</b><span>Pelajaran selesai</span></div>
+    <div class="card stat"><b>${Math.round(started.reduce((a, s) => a + s.p.pct, 0) / started.length)}%</b><span>Rata-rata progres</span></div>
+    <div class="card stat"><b>${isPro(u) ? 'Pro' : 'Gratis'}</b><span>Paket aktif</span></div>`;
+
+  // kursus yang belum selesai tapi sudah dimulai → prioritas; kalau nggak ada, kursus pertama
+  const cont = started.find(s => s.p.pct > 0 && s.p.pct < 100) || started.find(s => s.p.pct === 0);
+  const cell = c => String.fromCharCode(65 + COURSES.indexOf(c)) + '1';
+  document.getElementById('continue').innerHTML = cont ? `
+    <div class="card course-card" style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;gap:14px;align-items:center">
+          <span class="celltag">${cell(cont.c)}</span>
+          <div>
+            <b>${esc(cont.c.title)}</b>
+            <div class="course-meta"><span>${cont.p.done}/${cont.p.total} pelajaran</span></div>
+          </div>
+        </div>
+        <a class="btn btn-primary" href="${lessonUrl(cont.c.id, nextLesson(cont.c, u).id)}">Lanjutkan</a>
+      </div>
+      <div class="progress"><i style="width:${cont.p.pct}%"></i></div>
+    </div>` : '<p class="muted" style="margin-top:12px">Semua kursus sudah selesai. Coba terapkan di kerjaanmu.</p>';
+
+  document.getElementById('myCourses').innerHTML = started.map(({ c, p }) => `
+    <div class="card course-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <span class="celltag">${cell(c)}</span>
+        <span class="badge ${p.pct === 100 ? 'badge-green' : p.pct > 0 ? 'badge-amber' : 'badge-gray'}">
+          ${p.pct === 100 ? 'Selesai ✓' : p.pct > 0 ? p.pct + '%' : 'Belum mulai'}
+        </span>
+      </div>
+      <h3>${esc(c.title)}</h3>
+      <div class="course-meta"><span>${c.lessons.length} pelajaran</span><span>${c.hours} jam</span></div>
+      <div class="progress"><i style="width:${p.pct}%"></i></div>
+      <a class="btn ${p.pct > 0 ? 'btn-ghost' : 'btn-primary'} btn-sm" href="${lessonUrl(c.id, nextLesson(c, u).id)}" style="align-self:flex-start">
+        ${p.pct === 100 ? 'Ulangi' : p.pct > 0 ? 'Lanjutkan' : 'Mulai'}
+      </a>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kursus · ExcelAcademy</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="nav" id="nav"></header>
+
+<div class="container" style="padding-top:36px;padding-bottom:64px">
+  <div class="section-head" style="margin-bottom:24px">
+    <h2>Semua Kursus</h2>
+    <p>Pelajaran bertanda gembok terbuka untuk member Pro.</p>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px">
+    <label class="fx-input"><span class="fx">fx</span><input id="q" type="search" placeholder="Cari kursus atau topik…"></label>
+    <select id="level" style="padding:10px 14px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff">
+      <option value="">Semua Level</option>
+      <option>Pemula</option>
+      <option>Menengah</option>
+      <option>Mahir</option>
+    </select>
+  </div>
+
+  <div class="grid grid-2" id="grid"></div>
+  <p id="empty" class="center muted" style="display:none">Tidak ada kursus yang cocok dengan pencarian.</p>
+</div>
+
+<footer class="footer"><div class="container">© 2026 ExcelAcademy</div></footer>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function(){
+  const u = currentUser();
+  const q = document.getElementById('q'), lv = document.getElementById('level');
+
+  function render(){
+    const term = q.value.trim().toLowerCase(), level = lv.value;
+    const list = COURSES.filter(c =>
+      (!level || c.level === level) &&
+      (!term || (c.title + ' ' + c.desc + ' ' + c.level).toLowerCase().includes(term))
+    );
+    document.getElementById('empty').style.display = list.length ? 'none' : 'block';
+    document.getElementById('grid').innerHTML = list.map(c => {
+      const p = courseProgress(c, u);
+      const lockedLeft = c.lessons.filter(l => l.pro && !isPro(u)).length;
+      const cell = String.fromCharCode(65 + COURSES.indexOf(c)) + '1';
+      return `
+      <div class="card course-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <span class="celltag">${cell}</span>
+          <span class="badge ${c.tag === 'Pro' ? 'badge-amber' : 'badge-green'}">${c.tag}</span>
+        </div>
+        <h3>${esc(c.title)}</h3>
+        <p>${esc(c.desc)}</p>
+        <div class="course-meta">
+          <span>${c.lessons.length} pelajaran</span><span>${c.hours} jam</span><span>${c.level}</span>
+          ${lockedLeft ? `<span>🔒 ${lockedLeft} pelajaran Pro</span>` : ''}
+        </div>
+        ${u ? `<div class="progress"><i style="width:${p.pct}%"></i></div>
+        <small class="muted">${p.pct === 100 ? 'Selesai ✓' : p.done + '/' + p.total + ' pelajaran (' + p.pct + '%)'}</small>` : ''}
+        <a class="btn btn-primary btn-sm" href="${u ? lessonUrl(c.id, nextLesson(c, u).id) : 'login.html?next=courses.html'}" style="align-self:flex-start">
+          ${!u ? 'Masuk untuk Belajar' : p.pct > 0 ? 'Lanjutkan' : 'Mulai Kursus Ini'}
+        </a>
+      </div>`;
+    }).join('');
+  }
+  q.oninput = render; lv.onchange = render;
+  render();
+})();
+</script>
+</body>
+</html>
